@@ -5,6 +5,10 @@ import csv, time
 import joblib, os
 
 app = FastAPI()
+@app.get("/")
+def read_root():
+    return {"message": "Backend is running successfully 🚀"}
+
 MSG_COUNTER = Counter('ingest_messages_total', 'Number of ingest messages received')
 
 MODEL_PATH = "ml-model/model.joblib"
