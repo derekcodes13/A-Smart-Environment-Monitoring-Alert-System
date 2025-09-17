@@ -1,12 +1,13 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+import random
 
 app = FastAPI()
 
-# 👇 Allow ALL origins temporarily (quick fix)
+# CORS setup
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],   # <-- this means frontend can call backend
+    allow_origins=["*"],  
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -14,4 +15,13 @@ app.add_middleware(
 
 @app.get("/")
 def read_root():
-    return {"message": "Backend is running successfully 🚀"}
+    # Generate fake sensor data
+    temperature = round(random.uniform(20.0, 35.0), 2)  # °C
+    humidity = round(random.uniform(40.0, 80.0), 2)    # %
+    air_quality = random.randint(50, 150)  # AQI
+
+    return {
+        "temperature": temperature,
+        "humidity": humidity,
+        "air_quality": air_quality
+    }
