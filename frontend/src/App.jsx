@@ -3,13 +3,10 @@ import axios from "axios";
 import { Line } from "react-chartjs-2";
 import "chart.js/auto";
 
-import { Chart as ChartJS } from "chart.js/auto";
-
 function App() {
   const [temperatureHistory, setTemperatureHistory] = useState([]);
   const [humidityHistory, setHumidityHistory] = useState([]);
   const [airQualityHistory, setAirQualityHistory] = useState([]);
-
   const [timestamps, setTimestamps] = useState([]);
   const [sensorData, setSensorData] = useState(null);
 
@@ -18,19 +15,21 @@ function App() {
       axios
         .get("http://localhost:8000/")
         .then((res) => {
-          const { temperature, humidity, air_quality } = res.data;
+          const { temperature, humidity, air_quality, timestamp } = res.data;
+
           setSensorData({ temperature, humidity, air_quality });
-          setAirQualityHistory((prev) => [...prev.slice(-9), air_quality]);
 
           setTemperatureHistory((prev) => [...prev.slice(-9), temperature]);
           setHumidityHistory((prev) => [...prev.slice(-9), humidity]);
+          setAirQualityHistory((prev) => [...prev.slice(-9), air_quality]);
           setTimestamps((prev) => [
             ...prev.slice(-9),
-            new Date().toLocaleTimeString(),
+            new Date(timestamp).toLocaleTimeString(),
           ]);
         })
-        .catch((err) => console.error("Error details:", err));
+        .catch((err) => console.error("Error fetching sensor data:", err));
     };
+
     fetchData();
     const interval = setInterval(fetchData, 3000); // refresh every 3s
     return () => clearInterval(interval);
@@ -39,8 +38,9 @@ function App() {
   return (
     <div style={{ textAlign: "center", marginTop: "50px" }}>
       <h1>Smart Environment Monitoring</h1>
+
       {sensorData ? (
-        <div>
+        <div className="card">
           <p>
             <strong>🌡️ Temperature:</strong> {sensorData.temperature} °C
           </p>
@@ -56,7 +56,7 @@ function App() {
       )}
 
       {/* Temperature Chart */}
-      <div style={{ width: "600px", margin: "20px auto" }}>
+      <div className="chart-container">
         <h2>Temperature Trend</h2>
         <Line
           data={{
@@ -74,7 +74,7 @@ function App() {
       </div>
 
       {/* Humidity Chart */}
-      <div style={{ width: "600px", margin: "20px auto" }}>
+      <div className="chart-container">
         <h2>Humidity Trend</h2>
         <Line
           data={{
@@ -90,8 +90,9 @@ function App() {
           }}
         />
       </div>
+
       {/* Air Quality Chart */}
-      <div style={{ width: "600px", margin: "20px auto" }}>
+      <div className="chart-container">
         <h2>Air Quality Trend</h2>
         <Line
           data={{
@@ -110,4 +111,5 @@ function App() {
     </div>
   );
 }
+
 export default App;

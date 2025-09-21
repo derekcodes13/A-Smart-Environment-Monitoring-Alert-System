@@ -10,7 +10,7 @@ app.use(express.json());
 
 // ✅ Root route for quick testing
 app.get("/", (req, res) => {
-  res.send("Backend is working 🚀");
+  res.send("Backend (Express) is working 🚀");
 });
 
 // Sample emission data
@@ -41,5 +41,5 @@ app.get("/api/transport", (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`✅ Backend running on http://localhost:${PORT}`);
+  console.log(`✅ Express backend running on http://localhost:${PORT}`);
 });
