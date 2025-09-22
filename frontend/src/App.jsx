@@ -1,106 +1,114 @@
+// frontend/src/App.jsx
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-import { Line } from "react-chartjs-2";
+import { Line, Bar } from "react-chartjs-2";
 import "chart.js/auto";
+import "./App.css";
 
 function App() {
-  const [temperatureHistory, setTemperatureHistory] = useState([]);
-  const [humidityHistory, setHumidityHistory] = useState([]);
-  const [airQualityHistory, setAirQualityHistory] = useState([]);
-  const [timestamps, setTimestamps] = useState([]);
-  const [sensorData, setSensorData] = useState(null);
+  const [sensorLatest, setSensorLatest] = useState(null);
+  const [sensorHistory, setSensorHistory] = useState([]);
+  const [emissions, setEmissions] = useState([]);
+  const [recycling, setRecycling] = useState([]);
+  const [transport, setTransport] = useState([]);
 
+  // fetch static datasets once
   useEffect(() => {
-    const fetchData = () => {
-      axios
-        .get("http://localhost:8000/")
-        .then((res) => {
-          const { temperature, humidity, air_quality, timestamp } = res.data;
-
-          setSensorData({ temperature, humidity, air_quality });
-
-          setTemperatureHistory((prev) => [...prev.slice(-9), temperature]);
-          setHumidityHistory((prev) => [...prev.slice(-9), humidity]);
-          setAirQualityHistory((prev) => [...prev.slice(-9), air_quality]);
-          setTimestamps((prev) => [
-            ...prev.slice(-9),
-            new Date(timestamp).toLocaleTimeString(),
-          ]);
-        })
-        .catch((err) => console.error("Error fetching sensor data:", err));
-    };
-
-    fetchData();
-    const interval = setInterval(fetchData, 3000); // refresh every 3s
-    return () => clearInterval(interval);
+    axios
+      .get("http://localhost:4000/api/emissions")
+      .then((r) => setEmissions(r.data))
+      .catch(console.error);
+    axios
+      .get("http://localhost:4000/api/recycling")
+      .then((r) => setRecycling(r.data))
+      .catch(console.error);
+    axios
+      .get("http://localhost:4000/api/transport")
+      .then((r) => setTransport(r.data))
+      .catch(console.error);
   }, []);
 
+  // fetch sensor latest + history every 3s
+  useEffect(() => {
+    const fetchSensor = () => {
+      // get latest reading (this endpoint appends a new simulated reading)
+      axios
+        .get("http://localhost:4000/api/sensor")
+        .then((res) => {
+          setSensorLatest(res.data);
+        })
+        .catch((err) => console.error("sensor latest:", err));
+
+      // get history (last N readings)
+      axios
+        .get("http://localhost:4000/api/sensor/history")
+        .then((res) => {
+          setSensorHistory(res.data || []);
+        })
+        .catch((err) => console.error("sensor history:", err));
+    };
+
+    fetchSensor();
+    const id = setInterval(fetchSensor, 3000);
+    return () => clearInterval(id);
+  }, []);
+
+  // prepare chart data
+  const historyLabels = sensorHistory.map((h) =>
+    new Date(h.timestamp).toLocaleTimeString()
+  );
+  const tempData = sensorHistory.map((h) => h.temperature);
+  const humData = sensorHistory.map((h) => h.humidity);
+  const aqiData = sensorHistory.map((h) => h.air_quality);
+
   return (
-    <div style={{ textAlign: "center", marginTop: "50px" }}>
-      <h1>Smart Environment Monitoring</h1>
+    <div style={{ textAlign: "center", marginTop: "20px" }}>
+      <h1>🌍 Smart Environment Monitoring</h1>
 
-      {sensorData ? (
-        <div className="card">
-          <p>
-            <strong>🌡️ Temperature:</strong> {sensorData.temperature} °C
-          </p>
-          <p>
-            <strong>💧 Humidity:</strong> {sensorData.humidity} %
-          </p>
-          <p>
-            <strong>🌍 Air Quality:</strong> {sensorData.air_quality}
-          </p>
-        </div>
-      ) : (
-        <p>Loading sensor data...</p>
-      )}
+      <div className="card" style={{ maxWidth: 800, margin: "0 auto 20px" }}>
+        {sensorLatest ? (
+          <>
+            <p>
+              <strong>🌡️ Temperature:</strong> {sensorLatest.temperature} °C
+            </p>
+            <p>
+              <strong>💧 Humidity:</strong> {sensorLatest.humidity} %
+            </p>
+            <p>
+              <strong>🌍 Air Quality (AQI):</strong> {sensorLatest.air_quality}
+            </p>
+            <p>
+              <small>
+                Timestamp: {new Date(sensorLatest.timestamp).toLocaleString()}
+              </small>
+            </p>
+          </>
+        ) : (
+          <p>Loading sensor data...</p>
+        )}
+      </div>
 
-      {/* Temperature Chart */}
-      <div className="chart-container">
-        <h2>Temperature Trend</h2>
+      <h2>📊 Live Sensor History</h2>
+      <div style={{ maxWidth: 800, margin: "0 auto" }}>
         <Line
           data={{
-            labels: timestamps,
+            labels: historyLabels,
             datasets: [
               {
-                label: "Temperature (°C)",
-                data: temperatureHistory,
+                label: "Temp (°C)",
+                data: tempData,
                 borderColor: "red",
                 fill: false,
               },
-            ],
-          }}
-        />
-      </div>
-
-      {/* Humidity Chart */}
-      <div className="chart-container">
-        <h2>Humidity Trend</h2>
-        <Line
-          data={{
-            labels: timestamps,
-            datasets: [
               {
                 label: "Humidity (%)",
-                data: humidityHistory,
+                data: humData,
                 borderColor: "blue",
                 fill: false,
               },
-            ],
-          }}
-        />
-      </div>
-
-      {/* Air Quality Chart */}
-      <div className="chart-container">
-        <h2>Air Quality Trend</h2>
-        <Line
-          data={{
-            labels: timestamps,
-            datasets: [
               {
-                label: "Air Quality Index",
-                data: airQualityHistory,
+                label: "AQI",
+                data: aqiData,
                 borderColor: "green",
                 fill: false,
               },
@@ -108,6 +116,68 @@ function App() {
           }}
         />
       </div>
+
+      <h2 style={{ marginTop: 30 }}>📈 Emissions</h2>
+      {emissions.length > 0 ? (
+        <div style={{ maxWidth: 700, margin: "10px auto" }}>
+          <Line
+            data={{
+              labels: emissions.map((e) => e.year),
+              datasets: [
+                {
+                  label: "Emissions",
+                  data: emissions.map((e) => e.value),
+                  borderColor: "orange",
+                  fill: true,
+                },
+              ],
+            }}
+          />
+        </div>
+      ) : (
+        <p>Loading emissions...</p>
+      )}
+
+      <h2 style={{ marginTop: 30 }}>♻️ Recycling</h2>
+      {recycling.length > 0 ? (
+        <div style={{ maxWidth: 700, margin: "10px auto" }}>
+          <Bar
+            data={{
+              labels: recycling.map((r) => r.material),
+              datasets: [
+                {
+                  label: "Recycling %",
+                  data: recycling.map((r) => r.percent),
+                  backgroundColor: ["#6ab04c", "#f6b93b", "#54a0ff"],
+                },
+              ],
+            }}
+          />
+        </div>
+      ) : (
+        <p>Loading recycling...</p>
+      )}
+
+      <h2 style={{ marginTop: 30 }}>🚛 Transport Distances</h2>
+      {transport.length > 0 ? (
+        <div style={{ maxWidth: 700, margin: "10px auto 40px" }}>
+          <Line
+            data={{
+              labels: transport.map((t) => t.mode),
+              datasets: [
+                {
+                  label: "Distance (km)",
+                  data: transport.map((t) => t.distance),
+                  borderColor: "#2d98da",
+                  fill: true,
+                },
+              ],
+            }}
+          />
+        </div>
+      ) : (
+        <p>Loading transport...</p>
+      )}
     </div>
   );
 }
