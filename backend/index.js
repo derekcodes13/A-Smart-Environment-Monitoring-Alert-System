@@ -8,9 +8,35 @@ const PORT = 4000;
 app.use(cors());
 app.use(express.json());
 
-// ✅ Root route for quick testing
+// Simple in-memory sensor history (last 20 readings)
+const sensorHistory = [];
+
+// Helper: generate a fake sensor reading
+function generateSensorReading() {
+  const temperature = +(20 + Math.random() * 15).toFixed(2); // 20-35°C
+  const humidity = +(35 + Math.random() * 50).toFixed(2); // 35-85%
+  const air_quality = Math.floor(50 + Math.random() * 150); // 50-200 AQI
+  const timestamp = new Date().toISOString();
+  return { temperature, humidity, air_quality, timestamp };
+}
+
+// Root route
 app.get("/", (req, res) => {
   res.send("Backend (Express) is working 🚀");
+});
+
+// Sensor endpoints
+app.get("/api/sensor", (req, res) => {
+  // Create a new simulated reading and push to history
+  const reading = generateSensorReading();
+  sensorHistory.push(reading);
+  if (sensorHistory.length > 20) sensorHistory.shift();
+  res.json(reading);
+});
+
+app.get("/api/sensor/history", (req, res) => {
+  // Return last readings (oldest -> newest)
+  res.json(sensorHistory.slice());
 });
 
 // Sample emission data
