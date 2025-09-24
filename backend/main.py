@@ -1,8 +1,11 @@
 # backend/main.py
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from routes import predict  
 
 app = FastAPI()
+
+app.include_router(predict.router)
 
 # ✅ Enable CORS (so frontend can access API)
 app.add_middleware(
