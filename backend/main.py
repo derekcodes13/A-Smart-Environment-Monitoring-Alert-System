@@ -1,49 +1,88 @@
-# backend/main.py
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from routes import predict  
+import numpy as np
+from datetime import datetime, timedelta
 
 app = FastAPI()
 
-app.include_router(predict.router)
-
-# ✅ Enable CORS (so frontend can access API)
+# Enable CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # or restrict to ["http://localhost:5173"] for security
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# ✅ Root route for quick testing
+# ----------------------------
+# Example API endpoints
+# ----------------------------
 @app.get("/")
-def root():
-    return {"message": "Backend (FastAPI) is working 🚀"}
+def read_root():
+    return {"message": "Server is running!"}
 
-# ✅ Sample emission data
 @app.get("/api/emissions")
 def get_emissions():
-    return [
-        {"year": 2020, "value": 120},
-        {"year": 2021, "value": 150},
-        {"year": 2022, "value": 180},
-    ]
+    # Replace with your real logic
+    return {"co2": 123, "methane": 45}
 
-# ✅ Sample recycling data
-@app.get("/api/recycling")
-def get_recycling():
-    return [
-        {"material": "Aluminium", "percent": 65},
-        {"material": "Copper", "percent": 45},
-        {"material": "Steel", "percent": 70},
-    ]
-
-# ✅ Sample transport data
 @app.get("/api/transport")
 def get_transport():
-    return [
-        {"mode": "Truck", "distance": 320},
-        {"mode": "Rail", "distance": 220},
-        {"mode": "Ship", "distance": 150},
-    ]
+    # Replace with your real logic
+    return {"cars": 50, "buses": 10}
+
+@app.get("/api/recycling")
+def get_recycling():
+    # Replace with your real logic
+    return {"plastic": 30, "paper": 20}
+
+# ----------------------------
+# Dummy Sensor Data Endpoints
+# ----------------------------
+@app.get("/api/sensor")
+def get_sensor():
+    # Latest sensor readings (dummy)
+    return {
+        "temperature": 25.3,
+        "humidity": 60,
+        "air_quality_index": 42,
+        "timestamp": datetime.now().isoformat()
+    }
+
+@app.get("/api/sensor/history")
+def get_sensor_history():
+    # Last 10 sensor readings (dummy)
+    history = []
+    now = datetime.now()
+    for i in range(10):
+        history.append({
+            "temperature": 25 + i*0.1,
+            "humidity": 60 - i*0.5,
+            "air_quality_index": 40 + i,
+            "timestamp": (now - timedelta(minutes=i*5)).isoformat()
+        })
+    return history
+
+# ----------------------------
+# Commented out ML /predict endpoint
+# ----------------------------
+"""
+import pickle
+
+with open("model.pkl", "rb") as f:
+    model = pickle.load(f)
+
+from pydantic import BaseModel
+
+class PredictRequest(BaseModel):
+    features: list
+
+@app.post("/predict")
+def predict(data: PredictRequest):
+    try:
+        features = np.array(data.features).reshape(1, -1)
+        prediction = model.predict(features)
+        return {"prediction": prediction.tolist()}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+"""
