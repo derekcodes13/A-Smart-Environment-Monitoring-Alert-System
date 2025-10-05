@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from database import SensorData, SessionLocal
 
 import random
+from datetime import datetime
 
 app = FastAPI()
 
@@ -14,6 +15,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# In-memory history store
+history = []
 
 @app.get("/")
 def read_root():
@@ -34,6 +38,7 @@ def read_root():
     db.commit()
     db.refresh(new_entry)
 
+<<<<<<< HEAD
     return {
         "message": "Backend is running successfully 🚀",
         "temperature": temperature,
@@ -55,3 +60,22 @@ def get_history():
         for d in data
     ]
 
+=======
+    data = {
+        "temperature": temperature,
+        "humidity": humidity,
+        "air_quality": air_quality,
+        "timestamp": datetime.now().isoformat()
+    }
+
+    # Store last 10 readings in history
+    history.append(data)
+    if len(history) > 10:
+        history.pop(0)
+
+    return data
+
+@app.get("/history")
+def get_history():
+    return history
+>>>>>>> dev

@@ -1,139 +1,144 @@
 // frontend/src/App.jsx
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-import { Line, Bar } from "react-chartjs-2";
-import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  BarElement,
-  Title,
-  Tooltip,
-  Legend,
-} from "chart.js";
+import { Line } from "react-chartjs-2";
+import "chart.js/auto";
 
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  BarElement,
-  Title,
-  Tooltip,
-  Legend
-);
+import { Chart as ChartJS } from "chart.js/auto";
 
 function App() {
-  const [emissions, setEmissions] = useState([]);
-  const [recycling, setRecycling] = useState([]);
-  const [transport, setTransport] = useState([]);
+  const [temperatureHistory, setTemperatureHistory] = useState([]);
+  const [humidityHistory, setHumidityHistory] = useState([]);
+  const [airQualityHistory, setAirQualityHistory] = useState([]);
+
+  const [timestamps, setTimestamps] = useState([]);
+  const [sensorData, setSensorData] = useState(null);
 
   useEffect(() => {
-    // Fetch emissions
-    axios
-      .get("http://localhost:4000/api/emissions")
-      .then((res) => setEmissions(res.data))
-      .catch((err) => console.error("Error fetching emissions:", err));
+    const fetchData = () => {
+      axios
+        .get("http://localhost:8000/")
+        .then((res) => {
+          const { temperature, humidity, air_quality } = res.data;
+          setSensorData({ temperature, humidity, air_quality });
+          setAirQualityHistory((prev) => [...prev.slice(-9), air_quality]);
 
-    // Fetch recycling
-    axios
-      .get("http://localhost:4000/api/recycling")
-      .then((res) => setRecycling(res.data))
-      .catch((err) => console.error("Error fetching recycling:", err));
-
-    // Fetch transport
-    axios
-      .get("http://localhost:4000/api/transport")
-      .then((res) => setTransport(res.data))
-      .catch((err) => console.error("Error fetching transport:", err));
+          setTemperatureHistory((prev) => [...prev.slice(-9), temperature]);
+          setHumidityHistory((prev) => [...prev.slice(-9), humidity]);
+          setTimestamps((prev) => [
+            ...prev.slice(-9),
+            new Date().toLocaleTimeString(),
+          ]);
+        })
+        .catch((err) => console.error("Error details:", err));
+    };
+    fetchData();
+    const interval = setInterval(fetchData, 3000); // refresh every 3s
+    return () => clearInterval(interval);
   }, []);
 
+  // submit features to ML model
+  const handlePredict = async (e) => {
+    e.preventDefault();
+    try {
+      const res = await fetch("http://127.0.0.1:4000/predict", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          features: [
+            parseFloat(temperature),
+            parseFloat(humidity),
+            parseFloat(airQuality),
+            parseFloat(lightIntensity),
+          ],
+        }),
+      });
+      const data = await res.json();
+      setPrediction(data.prediction);
+    } catch (err) {
+      console.error("Prediction error:", err);
+    }
+  };
+
+  // prepare live sensor chart data
+  const historyLabels = sensorHistory.map((h) =>
+    new Date(h.timestamp).toLocaleTimeString()
+  );
+  const tempData = sensorHistory.map((h) => h.temperature);
+  const humData = sensorHistory.map((h) => h.humidity);
+  const aqiData = sensorHistory.map((h) => h.air_quality);
+
   return (
-    <div style={{ textAlign: "center", marginTop: "30px" }}>
-      <h1>🌍 Smart Environment Monitoring</h1>
-
-      {/* Emissions Line Chart */}
-      <h2>📈 Emissions Over Years</h2>
-      {emissions.length > 0 ? (
-        <div style={{ width: "650px", margin: "0 auto" }}>
-          <Line
-            data={{
-              labels: emissions.map((e) => e.year),
-              datasets: [
-                {
-                  label: "Emissions",
-                  data: emissions.map((e) => e.value),
-                  borderColor: "red",
-                  backgroundColor: "rgba(255, 0, 0, 0.3)",
-                  fill: true,
-                  tension: 0.3,
-                },
-              ],
-            }}
-            options={{
-              responsive: true,
-              plugins: { legend: { position: "top" } },
-            }}
-          />
+    <div style={{ textAlign: "center", marginTop: "50px" }}>
+      <h1>Smart Environment Monitoring</h1>
+      {sensorData ? (
+        <div>
+          <p>
+            <strong>🌡️ Temperature:</strong> {sensorData.temperature} °C
+          </p>
+          <p>
+            <strong>💧 Humidity:</strong> {sensorData.humidity} %
+          </p>
+          <p>
+            <strong>🌍 Air Quality:</strong> {sensorData.air_quality}
+          </p>
         </div>
       ) : (
-        <p>Loading emissions data...</p>
+        <p>Loading sensor data...</p>
       )}
 
-      {/* Recycling Bar Chart */}
-      <h2>♻️ Recycling Data</h2>
-      {recycling.length > 0 ? (
-        <div style={{ width: "650px", margin: "0 auto" }}>
-          <Bar
-            data={{
-              labels: recycling.map((r) => r.material),
-              datasets: [
-                {
-                  label: "Recycling %",
-                  data: recycling.map((r) => r.percent),
-                  backgroundColor: ["green", "orange", "blue"],
-                },
-              ],
-            }}
-            options={{
-              responsive: true,
-              plugins: { legend: { position: "top" } },
-            }}
-          />
-        </div>
-      ) : (
-        <p>Loading recycling data...</p>
-      )}
+      {/* Temperature Chart */}
+      <div style={{ width: "600px", margin: "20px auto" }}>
+        <h2>Temperature Trend</h2>
+        <Line
+          data={{
+            labels: timestamps,
+            datasets: [
+              {
+                label: "Temperature (°C)",
+                data: temperatureHistory,
+                borderColor: "red",
+                fill: false,
+              },
+            ],
+          }}
+        />
+      </div>
 
-      {/* Transport Line Chart */}
-      <h2>🚛 Transport Distances</h2>
-      {transport.length > 0 ? (
-        <div style={{ width: "650px", margin: "0 auto" }}>
-          <Line
-            data={{
-              labels: transport.map((t) => t.mode),
-              datasets: [
-                {
-                  label: "Distance (km)",
-                  data: transport.map((t) => t.distance),
-                  borderColor: "blue",
-                  backgroundColor: "rgba(0, 0, 255, 0.3)",
-                  fill: true,
-                  tension: 0.3,
-                },
-              ],
-            }}
-            options={{
-              responsive: true,
-              plugins: { legend: { position: "top" } },
-            }}
-          />
-        </div>
-      ) : (
-        <p>Loading transport data...</p>
-      )}
+      {/* Humidity Chart */}
+      <div style={{ width: "600px", margin: "20px auto" }}>
+        <h2>Humidity Trend</h2>
+        <Line
+          data={{
+            labels: timestamps,
+            datasets: [
+              {
+                label: "Humidity (%)",
+                data: humidityHistory,
+                borderColor: "blue",
+                fill: false,
+              },
+            ],
+          }}
+        />
+      </div>
+      {/* Air Quality Chart */}
+      <div style={{ width: "600px", margin: "20px auto" }}>
+        <h2>Air Quality Trend</h2>
+        <Line
+          data={{
+            labels: timestamps,
+            datasets: [
+              {
+                label: "Air Quality Index",
+                data: airQualityHistory,
+                borderColor: "green",
+                fill: false,
+              },
+            ],
+          }}
+        />
+      </div>
     </div>
   );
 }
