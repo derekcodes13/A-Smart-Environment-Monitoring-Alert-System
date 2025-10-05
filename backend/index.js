@@ -5,13 +5,6 @@ import cors from "cors";
 const app = express();
 const PORT = 4000;
 
-<<<<<<< HEAD
-app.use(cors()); // allow frontend to fetch from backend
-app.use(express.json());
-app.get("/", (req, res) => {
-  res.send("Backend is working 🚀");
-});
-=======
 app.use(cors());
 app.use(express.json());
 
@@ -46,7 +39,6 @@ app.get("/api/sensor/history", (req, res) => {
   res.json(sensorHistory.slice());
 });
 
->>>>>>> dev
 // Sample emission data
 app.get("/api/emissions", (req, res) => {
   res.json([
@@ -75,9 +67,5 @@ app.get("/api/transport", (req, res) => {
 });
 
 app.listen(PORT, () => {
-<<<<<<< HEAD
-  console.log(`✅ Backend running on http://localhost:${PORT}`);
-=======
   console.log(`✅ Express backend running on http://localhost:${PORT}`);
->>>>>>> dev
 });

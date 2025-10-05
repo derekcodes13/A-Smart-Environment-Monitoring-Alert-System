@@ -38,29 +38,6 @@ def read_root():
     db.commit()
     db.refresh(new_entry)
 
-<<<<<<< HEAD
-    return {
-        "message": "Backend is running successfully 🚀",
-        "temperature": temperature,
-        "humidity": humidity,
-        "air_quality": air_quality,
-        "timestamp": new_entry.timestamp
-    }
-@app.get("/history")
-def get_history():
-    db = SessionLocal()
-    data = db.query(SensorData).order_by(SensorData.timestamp.desc()).limit(20).all()
-    return [
-        {
-            "temperature": d.temperature,
-            "humidity": d.humidity,
-            "air_quality": d.air_quality,
-            "timestamp": d.timestamp
-        }
-        for d in data
-    ]
-
-=======
     data = {
         "temperature": temperature,
         "humidity": humidity,
@@ -78,4 +55,3 @@ def get_history():
 @app.get("/history")
 def get_history():
     return history
->>>>>>> dev
