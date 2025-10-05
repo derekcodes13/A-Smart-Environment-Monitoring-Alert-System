@@ -1,110 +1,50 @@
-// frontend/src/App.jsx
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { Line, Bar } from "react-chartjs-2";
 import "chart.js/auto";
 import "./App.css";
 
+// ✅ Base URL for your Render backend
+const BASE_URL =
+  "https://a-smart-environment-monitoring-alert-miqv.onrender.com";
+
 function App() {
-  const [sensorLatest, setSensorLatest] = useState(null);
-  const [sensorHistory, setSensorHistory] = useState([]);
-
-  const [emissions, setEmissions] = useState(null);
-  const [recycling, setRecycling] = useState(null);
-  const [transport, setTransport] = useState(null);
-
-  // input states for ML prediction
+  const [emissions, setEmissions] = useState([]);
+  const [recycling, setRecycling] = useState([]);
+  const [transport, setTransport] = useState([]);
+  const [sensorData, setSensorData] = useState([]);
+  const [history, setHistory] = useState([]);
   const [temperature, setTemperature] = useState("");
   const [humidity, setHumidity] = useState("");
   const [airQuality, setAirQuality] = useState("");
   const [lightIntensity, setLightIntensity] = useState("");
-  const [prediction, setPrediction] = useState(null);
+  const [prediction, setPrediction] = useState("");
 
-  // fetch static datasets once
   useEffect(() => {
-    axios
-      .get("http://localhost:4000/api/emissions")
-      .then((r) => {
-        const raw = r.data;
-        const chartData = {
-          labels: Object.keys(raw),
-          datasets: [
-            {
-              label: "Emissions",
-              data: Object.values(raw),
-              borderColor: "orange",
-              backgroundColor: "rgba(255,165,0,0.5)",
-              fill: true,
-            },
-          ],
-        };
-        setEmissions(chartData);
-      })
-      .catch(console.error);
-
-    axios
-      .get("http://localhost:4000/api/recycling")
-      .then((r) => {
-        const raw = r.data;
-        const chartData = {
-          labels: Object.keys(raw),
-          datasets: [
-            {
-              label: "Recycling %",
-              data: Object.values(raw),
-              backgroundColor: ["#6ab04c", "#f6b93b", "#54a0ff", "#e056fd"],
-            },
-          ],
-        };
-        setRecycling(chartData);
-      })
-      .catch(console.error);
-
-    axios
-      .get("http://localhost:4000/api/transport")
-      .then((r) => {
-        const raw = r.data;
-        const chartData = {
-          labels: Object.keys(raw),
-          datasets: [
-            {
-              label: "Distance (km)",
-              data: Object.values(raw),
-              borderColor: "#2d98da",
-              backgroundColor: "rgba(45,152,218,0.5)",
-              fill: true,
-            },
-          ],
-        };
-        setTransport(chartData);
-      })
-      .catch(console.error);
+    fetchData();
   }, []);
 
-  // fetch sensor latest + history every 3s
-  useEffect(() => {
-    const fetchSensor = () => {
-      axios
-        .get("http://localhost:4000/api/sensor")
-        .then((res) => setSensorLatest(res.data))
-        .catch((err) => console.error("sensor latest:", err));
-
-      axios
-        .get("http://localhost:4000/api/sensor/history")
-        .then((res) => setSensorHistory(res.data || []))
-        .catch((err) => console.error("sensor history:", err));
-    };
-
-    fetchSensor();
-    const id = setInterval(fetchSensor, 3000);
-    return () => clearInterval(id);
-  }, []);
-
-  // submit features to ML model
-  const handlePredict = async (e) => {
-    e.preventDefault();
+  const fetchData = async () => {
     try {
-      const res = await fetch("http://127.0.0.1:4000/predict", {
+      const emissionsRes = await axios.get(`${BASE_URL}/api/emissions`);
+      const recyclingRes = await axios.get(`${BASE_URL}/api/recycling`);
+      const transportRes = await axios.get(`${BASE_URL}/api/transport`);
+      const sensorRes = await axios.get(`${BASE_URL}/api/sensor`);
+      const historyRes = await axios.get(`${BASE_URL}/api/sensor/history`);
+
+      setEmissions(emissionsRes.data);
+      setRecycling(recyclingRes.data);
+      setTransport(transportRes.data);
+      setSensorData(sensorRes.data);
+      setHistory(historyRes.data);
+    } catch (err) {
+      console.error("Error fetching data:", err);
+    }
+  };
+
+  const handlePredict = async () => {
+    try {
+      const res = await fetch(`${BASE_URL}/predict`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -116,161 +56,113 @@ function App() {
           ],
         }),
       });
+
       const data = await res.json();
       setPrediction(data.prediction);
     } catch (err) {
-      console.error("Prediction error:", err);
+      console.error("Error predicting:", err);
     }
   };
 
-  // prepare live sensor chart data
-  const historyLabels = sensorHistory.map((h) =>
-    new Date(h.timestamp).toLocaleTimeString()
-  );
-  const tempData = sensorHistory.map((h) => h.temperature);
-  const humData = sensorHistory.map((h) => h.humidity);
-  const aqiData = sensorHistory.map((h) => h.air_quality);
-
   return (
-    <div style={{ textAlign: "center", marginTop: "20px" }}>
-      <h1>🌍 Smart Environment Monitoring</h1>
+    <div className="App">
+      <h1>🌍 Smart Environment Monitoring & Alert System</h1>
 
-      {/* Latest Sensor Card */}
-      <div className="card" style={{ maxWidth: 800, margin: "0 auto 20px" }}>
-        {sensorLatest ? (
-          <>
-            <p>
-              <strong>🌡️ Temperature:</strong> {sensorLatest.temperature} °C
-            </p>
-            <p>
-              <strong>💧 Humidity:</strong> {sensorLatest.humidity} %
-            </p>
-            <p>
-              <strong>🌍 Air Quality (AQI):</strong> {sensorLatest.air_quality}
-            </p>
-            <p>
-              <small>
-                Timestamp: {new Date(sensorLatest.timestamp).toLocaleString()}
-              </small>
-            </p>
-          </>
-        ) : (
-          <p>Loading sensor data...</p>
-        )}
-      </div>
+      <section className="charts">
+        <div className="chart">
+          <h2>CO₂ Emissions</h2>
+          <Bar
+            data={{
+              labels: emissions.map((e) => e.country),
+              datasets: [
+                {
+                  label: "Emissions (tons)",
+                  data: emissions.map((e) => e.value),
+                },
+              ],
+            }}
+          />
+        </div>
 
-      {/* History Line Chart */}
-      <h2>📊 Live Sensor History</h2>
-      <div style={{ maxWidth: 800, margin: "0 auto" }}>
+        <div className="chart">
+          <h2>Recycling Rate</h2>
+          <Line
+            data={{
+              labels: recycling.map((r) => r.year),
+              datasets: [
+                {
+                  label: "Recycling (%)",
+                  data: recycling.map((r) => r.value),
+                },
+              ],
+            }}
+          />
+        </div>
+      </section>
+
+      <section className="sensor-section">
+        <h2>Real-Time Sensor Data</h2>
+        <ul>
+          {sensorData.map((data, index) => (
+            <li key={index}>
+              🌡️ {data.temperature}°C | 💧 {data.humidity}% | 🌫️ AQI:{" "}
+              {data.airQuality} | 💡 Light: {data.lightIntensity} lux
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      <section className="history-section">
+        <h2>Sensor History</h2>
         <Line
           data={{
-            labels: historyLabels,
+            labels: history.map((h) => h.timestamp),
             datasets: [
               {
-                label: "Temp (°C)",
-                data: tempData,
-                borderColor: "red",
-                fill: false,
+                label: "Temperature (°C)",
+                data: history.map((h) => h.temperature),
               },
               {
                 label: "Humidity (%)",
-                data: humData,
-                borderColor: "blue",
-                fill: false,
-              },
-              {
-                label: "AQI",
-                data: aqiData,
-                borderColor: "green",
-                fill: false,
+                data: history.map((h) => h.humidity),
               },
             ],
           }}
         />
-      </div>
+      </section>
 
-      {/* Emissions */}
-      <h2 style={{ marginTop: 30 }}>📈 Emissions</h2>
-      {emissions ? (
-        <div style={{ maxWidth: 700, margin: "10px auto" }}>
-          <Bar data={emissions} />
-        </div>
-      ) : (
-        <p>Loading emissions...</p>
-      )}
-
-      {/* Recycling */}
-      <h2 style={{ marginTop: 30 }}>♻️ Recycling</h2>
-      {recycling ? (
-        <div style={{ maxWidth: 700, margin: "10px auto" }}>
-          <Bar data={recycling} />
-        </div>
-      ) : (
-        <p>Loading recycling...</p>
-      )}
-
-      {/* Transport */}
-      <h2 style={{ marginTop: 30 }}>🚛 Transport Distances</h2>
-      {transport ? (
-        <div style={{ maxWidth: 700, margin: "10px auto 40px" }}>
-          <Line data={transport} />
-        </div>
-      ) : (
-        <p>Loading transport...</p>
-      )}
-
-      {/* Prediction Form */}
-      <h2 style={{ marginTop: 30 }}>🤖 ML Prediction</h2>
-      <form
-        onSubmit={handlePredict}
-        style={{ margin: "20px auto", maxWidth: 400 }}
-      >
+      <section className="prediction-section">
+        <h2>AI Prediction Model</h2>
         <input
           type="number"
-          step="any"
-          placeholder="Temperature"
+          placeholder="Temperature (°C)"
           value={temperature}
           onChange={(e) => setTemperature(e.target.value)}
-          required
         />
-        <br />
         <input
           type="number"
-          step="any"
-          placeholder="Humidity"
+          placeholder="Humidity (%)"
           value={humidity}
           onChange={(e) => setHumidity(e.target.value)}
-          required
         />
-        <br />
         <input
           type="number"
-          step="any"
-          placeholder="Air Quality"
+          placeholder="Air Quality (AQI)"
           value={airQuality}
           onChange={(e) => setAirQuality(e.target.value)}
-          required
         />
-        <br />
         <input
           type="number"
-          step="any"
-          placeholder="Light Intensity"
+          placeholder="Light Intensity (lux)"
           value={lightIntensity}
           onChange={(e) => setLightIntensity(e.target.value)}
-          required
         />
-        <br />
-        <button type="submit" style={{ marginTop: 10 }}>
-          Predict
-        </button>
-      </form>
+        <button onClick={handlePredict}>Predict</button>
 
-      {prediction !== null && (
-        <div style={{ marginTop: 20 }}>
-          <h3>Prediction Result: {prediction}</h3>
-        </div>
-      )}
+        {prediction && (
+          <h3>🌤️ Predicted Environmental Category: {prediction}</h3>
+        )}
+      </section>
     </div>
   );
 }
