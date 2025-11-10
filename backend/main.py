@@ -3,9 +3,9 @@ from fastapi.middleware.cors import CORSMiddleware
 import numpy as np
 from datetime import datetime, timedelta
 import sqlite3, datetime
-from fastapi import BackgroundTasks
-import datetime
 
+from fastapi import BackgroundTasks 
+import datetime
 
 DB_FILE = "data.db"
 
@@ -99,6 +99,62 @@ def get_sensor_history():
             "timestamp": (now - timedelta(minutes=i*5)).isoformat()
         })
     return history
+# ============================
+# 🚀 SERVERLESS ALERT FUNCTION
+# ============================
+
+def check_and_alert(data):
+    conn = sqlite3.connect(DB_FILE)
+    c = conn.cursor()
+    msg = None
+    if data["air_quality"] > 150:
+        msg = "⚠️ Poor Air Quality Detected!"
+        level = "Critical"
+    elif data["temperature"] > 33:
+        msg = "🔥 High Temperature Alert!"
+        level = "Warning"
+    if msg:
+        c.execute(
+            "INSERT INTO alerts (message, level, created_at) VALUES (?, ?, ?)",
+            (msg, level, datetime.datetime.now().isoformat()),
+        )
+        conn.commit()
+    conn.close()
+
+
+@app.post("/api/sensor/add")
+def add_sensor_data(data: dict, background_tasks: BackgroundTasks):
+    conn = sqlite3.connect(DB_FILE)
+    c = conn.cursor()
+    c.execute(
+        "INSERT INTO sensor_data (temperature, humidity, air_quality, light, timestamp) VALUES (?, ?, ?, ?, ?)",
+        (
+            data["temperature"],
+            data["humidity"],
+            data["air_quality"],
+            data["light"],
+            datetime.datetime.now().isoformat(),
+        ),
+    )
+    conn.commit()
+    conn.close()
+
+    # Run alert check in background
+    background_tasks.add_task(check_and_alert, data)
+    return {"status": "✅ Sensor data added"}
+
+
+@app.get("/api/alerts")
+def get_alerts():
+    conn = sqlite3.connect(DB_FILE)
+    c = conn.cursor()
+    c.execute("SELECT * FROM alerts ORDER BY created_at DESC")
+    data = [
+        {"id": r[0], "message": r[1], "level": r[2], "created_at": r[3]}
+        for r in c.fetchall()
+    ]
+    conn.close()
+    return data
 
 # ----------------------------
 # Commented out ML /predict endpoint
