@@ -2,6 +2,43 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 import numpy as np
 from datetime import datetime, timedelta
+import sqlite3, datetime
+from fastapi import BackgroundTasks
+import datetime
+
+
+DB_FILE = "data.db"
+
+def init_db():
+    conn = sqlite3.connect(DB_FILE)
+    c = conn.cursor()
+
+    # Table 1: sensor data
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS sensor_data (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            temperature REAL,
+            humidity REAL,
+            air_quality REAL,
+            light REAL,
+            timestamp TEXT
+        )
+    ''')
+
+    # Table 2: alerts
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS alerts (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            message TEXT,
+            level TEXT,
+            created_at TEXT
+        )
+    ''')
+
+    conn.commit()
+    conn.close()
+
+init_db()
 
 app = FastAPI()
 

@@ -1,27 +1,29 @@
-#root {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
-  text-align: center;
-  font-family: Arial, sans-serif;
+body {
+  margin: 0;
+  font-family: "Poppins", sans-serif;
+  background: linear-gradient(135deg, #0078d7, #00bcd4);
+  color: white;
 }
 
-h1 {
-  margin-bottom: 1rem;
+.input {
+  border: none;
+  padding: 0.7rem 1rem;
+  border-radius: 8px;
+  outline: none;
+  width: 150px;
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
 }
 
-h2 {
-  margin: 1.5rem 0 0.5rem 0;
+.input::placeholder {
+  color: #eee;
 }
 
-.chart-container {
-  width: 600px;
-  margin: 20px auto;
+.input:focus {
+  background: rgba(255, 255, 255, 0.3);
 }
 
-.card {
-  padding: 1.5em;
-  background: #f9f9f9;
-  border-radius: 10px;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+button:hover {
+  transform: scale(1.05);
+  transition: 0.2s;
 }
